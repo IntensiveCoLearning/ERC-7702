@@ -20,8 +20,15 @@ timezone: UTC+8
 * 什么是 EIP-7702
 * EIP-7702 关键组成部分
 * 与EIP-4337 的对比
-Day 1笔记：https://app.yinxiang.com/fx/17f9bdee-c4c1-4c3b-b070-baf34d946a48
+
+Day 1 笔记：https://www.notion.so/Day-1-EIP-7702-1f4f5920d54c801cbcb8ccf347843864?pvs=4
 
 ### 2025.05.15
 
-<!-- Content_END -->
+* 背景概述
+* 访问控制风险（Access Controls）
+* 初始化风险（Initialization Challenges）
+* 存储冲突风险（Storage Collisions）
+* 总结
+
+Day 2 笔记：https://www.notion.so/Day-2-EIP-7702-1f4f5920d54c80b4a53dd6077209648b?pvs=4
