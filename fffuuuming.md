@@ -402,6 +402,108 @@ Allowing the sender of an EIP-7702 to also set code has the possibility so a use
     - Developers should assume that future participants may all be smart contracts during the development process.
 - **Contract Compatibility**
 Need to implement the corresponding fallbck function ot receive token based on ERC-721 and ERC-777 tokens
+
+### 2025-05-17
+#### Important Parameters
+- ```SET_CODE_TX_TYPE``` = ```0x04```: A unique identifier to signal to the  client (e.g. Geth) that this transaction is a SetCode transaction
+- ```MAGIC``` = ```0x05```: A **domain separator** (idea from [EIP-712](https://eips.ethereum.org/EIPS/eip-712)) used in the hash digest of an authorization tuple for signing (SignSetCode) to uniquely tag it as an EIP-7702 authorization
+    - Prevents **cross-protocol replay attacks**
+- ```PER_AUTH_BASE_COST``` = 12500: **Gas cost** incurred **per authorization tuple** inside the authorization_list, to compensates for **the extra validation and signature recovery work** the client must perform for each authorization.
+    - When a ```SetCode``` transaction is executed, the EVM adds this cost to the total gas used for each authorization in the list, regardless of whether the address is already authorized or not.
+- ```PER_EMPTY_ACCOUNT_COST``` = 25000: Additional gas cost for writing code to an empty EOA account
+    - If the delegated code is being installed on an empty account, this cost is added once per such account in the transaction.
+#### EIP-2718
+An envelope transaction type that can differentiate the vaious transactions by its own ```TransactionType``` (even legacy transaction who starts with a byte ```>= 0xc0```)
+- **Transaction**:
+    - ```transactionsRoot```: ```patriciaTrie(rlp(Index) => Transaction)```
+    - ```Index```: index in the block of this transaction
+    - ```Transaction```: ```TransactionType || ReceiptPayload``` or ```LegacyReceipt```
+        - ```TransactionPayload```: An opaque byte array -> can **support different encoding formats**
+        - ```TransactionType```: ```[0, 0x7f]```
+    - ```LegacyTransaction```: ```rlp([nonce, gasPrice, gasLimit, to, value, data, v, r, s])```
+- **Receipt**:
+    - ```receiptRoot```: ```patriciaTrie(rlp(Index) => Receipt)```
+    - ```Receipt```: ```TransactionType || ReceiptPayload``` or ```LegacyReceipt```
+        - ```ReceiptPayload```: An opaque byte array
+    - ```LegacyReceipt```: ```rlp([status, cumulativeGasUsed, logsBloom, logs])```
+#### Set code transaction (from [EIP-2718](https://eips.ethereum.org/EIPS/eip-2718))
+In EIP-7702:
+- `TransactionType` = `SET_CODE_TX_TYPE`
+- [`TransactionPayload`](#Core-Component-Structure): A rlp serialization of the aforementioned, which follows the semantic [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844): ```destination``` (```to``` in other type of transcation) field can't be null  
+    - ```(signature_y_parity, signature_r, signature_s)``` of this transcation represent a secp256k1 signature over ```(keccak256(SET_CODE_TX_TYPE || TransactionPayload)```
+#### Instruction Set Modifications due to Delegation indicator
+```Delegation indicators``` use the banned opcode ```0xef``` (defined in [EIP-3541](https://eips.ethereum.org/EIPS/eip-3541)), which forces all **code executing operations** to follow the address pointer to obtain the code and executes it in the context of authority.
+- ```CALL```
+- ```CALLCODE```
+- ```DELEGATECALL```
+- ```STATICCALL```
+- Any transaction where ```destination``` points to an address with a delegation indicator present
+
+**Question**: What if use ```DELEGATECALL``` for deldegation ?  
+For example: Assume a delefated EOA A with code field ```(0xef0100 || B)```
+1. Someone execute ```CALL``` with ```to``` =  A, which execute the logic inside B, and that logic inside B execute ```DELEGATECALL```
+2. Someone execute ```DELEGATECALL``` with ```to``` = A
+#### Gas Costs
+The intrinsic cost of the new transaction is inherited from [EIP-2930](https://eips.ethereum.org/EIPS/eip-2930) + ```PER_EMPTY_ACCOUNT_COST * authorization list length```, and the concept of cold/warm access from [EIP-2929](https://eips.ethereum.org/EIPS/eip-2929):
+- Prevent cheap repeated probing of arbitrary accounts (**DoS** mitigation).
+- Encourage **explicit access lists** (introduced in **EIP-2930**) or re-use of already accessed addresses.
+#### Forward-compatibility with Endgame AA
+![upload_b554f9383ff3daa444153aac85b5877b](https://hackmd.io/_uploads/HJTqioVZgx.png)
+- Original design assumes the user is a smart contract wallet that already exists and signs operations with its internal validation logic.
+- With EIP-7702, the user is still an EOA and can sign a ```UserOperation``` as a EIP-7702 transaction, whose ```address``` field in ```authorization tuple``` is an EIP-4337 wallet
+
+
+| Step | Description |
+| ---- | ----------- |
+|     Step 1 (User signs) |        User signs EIP-7702 authorization tuple along with the UserOperation. Signature is from EOA.     |
+|    Step 2–3 (Mempool & Bundling)  |   The signed UserOperation is indistinguishable from a 4337 one, and bundlers include it in a bundle.          |
+| Step 4 (EntryPoint validation) | EntryPoint calls validateUserOp() on the delegated smart contract wallet, as per 7702 delegation.        |
+#### Backwards Compatibility
+- An account balance can only decrease as a result of a transaction originating from that account.
+    - Once an account has been delegated, any call to the account may also cause the balance to decrease.
+- An EOA nonce may not increase after transaction execution has begun.
+    - Once an account has been delegated, the account may call a create operation during execution, causing the nonce to increase.
+- tx.origin == msg.sender can only be true in the topmost frame of execution.
+    - Once an account has been delegated, it can invoke multiple calls per transaction.
+#### Security Consideration
+- **Implementation of secure delegate contracts**
+Check that the signature from the user includes all important parameters:
+    - **Nonce**: replay attack
+    - **Value**: Prevents relayers from injecting unexpected ```msg.value``` and draining ```ETH```.
+    - **Gas**: Grief attacks
+    - **Target & Calldata**: Prevents relayers from changing which function is called or with what arguments.
+- **Cheating Sponsored transaction relayers**
+EOAs can trick relayers into spending gas without result by:
+    - Invalidating the Authorization (via nonce bump)
+    - Sweeping Assets Before Execution  
+
+    Realyer can either require a bond to be deposited or implement a reputation system.
+
+For more, refer to the previous notes
+#### Transaction origination
+Loosens the restriction from [EIP-3607](https://eips.ethereum.org/EIPS/eip-3607): An account can originate transaction if its code is like ```0xEF0100 || <address>```, and the address needs to be added ```accessed_addresses``` (EIP-2929)
+#### Transaction propagation
+- ```ReceiptPayload```: mentioned above
+<!-- Content_END -->
+### 2025-05-18
+#### Concern of Phishing
+Since **A single malicious 7702 type signature can drain your entire wallet in a single transaction**, wallet providers (e.g. MetaMask) may not allow any random dApp (e.g. phishing website) to prompt (trick) users to sign such powerful 7702-type payloads
+- **Wallet**:
+    - Whether to completely/partially restrict Dapps to initiate 7702 signatures
+    - Provide in-depth simulation on unknown ```contract_code```
+    - Ensure only a certain standardised smart account ```contract_code``` is used in 7702 signatures maintained by them
+- **Dapps**: 
+    - Should not expect wallets to blindly allow them to ask users to sign EIP-7702 messages that install arbitrary contract code. 
+    - They can instead send intents like ```approve + swap``` using APIs (e.g. [EIP-5792](https://eips.ethereum.org/EIPS/eip-5792) type RPC endpoints).
+    - Wallets may choose to go for 7702/4337 transactions. if 7702 is choosen, may use a standard ```contract_code``` maintained by the themselves.
+- **Developers**: Even if wallets restrict dApps from generating 7702-type requests directly, EOA can still bypass that via scripts, since ultimately the user’s private key signs the message -> should be **extra careful**
+
+| Role        | EIP-7702 Impact                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------- |
+| 🧑‍💻 Users | Can upgrade their EOA to act like a smart wallet for a single transaction. Powerful but risky.                |
+|     🧩 dApps        |     Might request EOA to act like a smart contract — but should **avoid raw code signing** due to phishing risks.                                                                                                          |
+| 🔐 Wallets    | Must **restrict** or **simulate** 7702 signatures to protect users. Might prefer **controlled workflows via intents** (EIP-5792). |
+
 #### Reference
 - [In-Depth Discussion on EIP-7702 and Best Practices](https://defihacklabs.substack.com/p/in-depth-discussion-on-eip-7702-and)
 - [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)
