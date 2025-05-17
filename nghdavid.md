@@ -81,4 +81,13 @@ EIP-7702 已被納入以太坊 2025 年的 Pectra 升級中，並受到社群廣
   
   Persistent state across redelegations and upgrades: Delegating code does not clear existing storage. When migrating from one delegation designator contract to another, users and developers must account for the old storage data to prevent storage collisions and unexpected behaviors.
 
+### 2025.05.17
+*Gas sponsorship*  
+Any bundler/relayer can call this contract with correct calldata. EOA performs this required operation, while gas fees are incurred by relayer/bundler.
+
+*Phishing attack of EIP-7702 wallet*  
+A malicious EIP-7702 signature can drain your wallet in a single transaction.
+
+*Transaction batching*  
+Batch multiple transactions into single transaction
 <!-- Content_END -->
