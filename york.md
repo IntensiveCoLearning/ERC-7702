@@ -58,7 +58,6 @@ Key Points
 3. Metamask Smart Account
 
 Note Link: https://github.com/Yorkchung/EIP-7702-Learning/blob/main/Day04.md
-Note Link: https://github.com/Yorkchung/EIP-7702-Learning/blob/main/Day04.md
 
 ### 2025.05.18
 
