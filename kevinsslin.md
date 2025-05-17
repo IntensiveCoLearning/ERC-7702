@@ -97,6 +97,87 @@ EIP-7702 enables Externally Owned Accounts (EOAs) to set their own code via a sp
 
 ### 2025.05.16
 
+### 2025.05.17
+
+# 🔍 A Deep Dive into EIP-7702 with Best Practices
+
+> **Speaker:** Kong (Leader of Security Audit Team)
+> [Original Video](https://www.youtube.com/watch?v=uZTeYfYM6fM)
+
+---
+
+## 📌 Recap & Additional Notes of EIP-7702
+
+* **Chain ID Replay**:
+
+  * 若將 `chainId` 設定為 `0`，可以在所有支持 EIP-7702 的鏈上進行 replay。
+  * 對錢包服務商友善，僅需用戶簽署一次鏈下簽名即可在所有鏈上創建智能合約錢包。
+
+* **交易與授權分離**:
+  
+  * 交易的發起者（付 gas fee）和交易的授權者（鏈下簽名者）可以是不同人，實現 gas fee 的代付。
+  * 同一交易中同一地址的多個授權規則中，只有最新的一條會被應用。
+
+* **Address Creation Limitations (EIP-3541)**:
+
+  * 開發者無法使用 `new`, `create`, `create2` 等方式創建以 `0xef` 開頭的地址。
+
+---
+
+## 🚩 Best Practices
+
+### 1. 🔑 Private Key Management
+
+* 即使透過 EIP-7702 可實現如 social recovery 等私鑰遺失的方案，但私鑰仍具最高權限，能重新 delegate 給其他地址。
+* 私鑰管理仍極為重要，應設計嚴謹的保護機制。
+
+### 2. 🔄 Multi-chain Replay Risks
+
+* 將 `chainId` 設為 `0` 啟用多鏈 replay，需注意不同鏈上同一地址的智能合約代碼可能不同，存在潛在安全風險。
+
+### 3. 🚧 Atomic Initialization and Delegation Issues
+
+* EIP-7702 不允許在單一交易中同時進行 delegate 和合約初始化（no initcode）。
+* 存在搶跑（front-run）攻擊風險，應分開處理 delegation 與 initialization。
+
+### 4. 📦 Storage Management
+
+* Delegation 切換可能引發 storage conflict，建議：
+
+  * for user: 在 re-delegate 前將資金提取以避免損失。
+  * for dev: 採用 [ERC-7201 Storage Namespaces](https://eips.ethereum.org/EIPS/eip-7201) 分隔儲存空間。
+  * for wallet service provider: 利用 [ERC-7779](https://eips.ethereum.org/EIPS/eip-7779) 檢查儲存相容性並清理舊的儲存資料。
+
+### 5. 🚨 False Top-up 防範
+
+* 隨著智能合約錢包增多，交易所可能遭遇更多智能合約 deposit 的情況。
+* 建議透過交易追蹤（tracing）防止 false top-up 攻擊（[詳細說明](https://slowmist.medium.com/how-does-the-false-top-up-attack-break-through-the-defense-of-the-exchange-d6e8ebb434f5)）。
+
+### 6. 🔄 Account Conversion (EOA ↔ CA)
+
+* EOA 和智能合約帳戶（CA）之間的轉換可能，使得 `msg.sender == tx.origin` 的假設失效。
+* 開發者不應再假設交易發起者一定是 EOA。
+
+### 7. ✅ Contract Compatibility
+
+* Delegated contract 須確認與各種 token 或協議的相容性，例如 ERC-721 NFT 需要實作 `onERC721Received()` callback。
+
+### 8. 🎣 Phishing Risks
+
+* EIP-7702 的鏈下簽名授權將使釣魚攻擊更容易執行。
+* 錢包服務提供商應詳盡提醒用戶授權合約的詳細資訊以防範攻擊。
+
+---
+
+### 📖 Sources & Further Reading
+
+* [EIP-7702 Official Documentation](https://eips.ethereum.org/EIPS/eip-7702)
+* [EIP-3541 Details](https://eips.ethereum.org/EIPS/eip-3541)
+* [ERC-7201: Storage Namespaces](https://eips.ethereum.org/EIPS/eip-7201)
+* [ERC-7779 Storage Compatibility Checks](https://eips.ethereum.org/EIPS/eip-7779)
+* [SlowMist's False Top-up Explanation](https://slowmist.medium.com/how-does-the-false-top-up-attack-break-through-the-defense-of-the-exchange-d6e8ebb434f5)
+
+
 <!-- Content_END -->
 
 
