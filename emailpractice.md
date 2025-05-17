@@ -136,6 +136,65 @@ actions/BatchSupply.tsx :
 
 state/TokenProvider.tsx :  從permit拿到簽名，然後儲存資料在前端瀏覽器(本地)的樣子。 簽名存在這裡，  刪除簽名資料、查看餘額 等等的功能好像也在這個檔案
 
+___
+### 2025.05.17
+- 新交易格式：SET_CODE_TX_TYPE（Type = 0x04）
+採用 RLP 編碼，包含以下字段（部分與 EIP-1559 相似）：
 
+chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit
+
+destination, value, data, access_list
+
+authorization_list（新增）
+
+簽名字段：y_parity, r, s
+
+authorization_list 是核心
+必填，非空
+每個授權條目包含 6 個字段：
+chain_id: 0 = 可跨鏈重放（需 Nonce 一致）
+address: 被委託執行的目標合約地址
+nonce: 授權者的當前帳戶 nonce
+y_parity, r, s: 授權者對 (chain_id, address, nonce) + magic number 0x05 的簽名（用 keccak256）
+
+-  一筆交易可以包含多個授權，但：
+同一授權者的多個條目 → 只有最後一個會被使用
+簽名驗證失敗 → 不會使交易失敗，只跳過該條目（防 DoS）
+
+-  交易與授權分離（支持 Meta-Tx / Gas 贊助）
+交易的 sender（支付 Gas 的人）與授權 signer（真正要執行的人）可以不同。
+
+這讓第三方幫你發送交易成為可能，例如：
+
+
+
+- 交易執行流程簡述
+驗證 transaction nonce 與 sender 的帳戶匹配
+遍歷 authorization_list，對每條目進行：
+驗簽
+檢查 nonce
+nonce 驗證通過 → nonce +1
+
+設定授權者的帳戶 code 為 0xef0100 || address
+0xef0100 是委託指示符，address 是目標智能合約
+若 address 為零地址，則清除 code
+最後執行 destination 的 call，但會載入委託 code 執行
+
+-  委託行為：智能 EOA
+一旦授權成功，該 EOA 會被視為一個「智能 EOA」：
+
+CALL / DELEGATECALL 等操作，會執行委託合約的代碼
+CODESIZE / CODECOPY 取得的是委託合約的 code
+EXTCODESIZE / EXTCODECOPY 仍作用於原 EOA
+
+禁止多層委託（遞歸）
+
+-  Gas 成本
+內在成本：基於 EIP-2930，外加：
+PER_EMPTY_ACCOUNT_COST × 授權條目數量（約 12500 Gas / 條）
+即使授權失敗或重複，也會收取 Gas
+若授權帳戶先前已存在 → 可部分退還 Gas（避免 DoS）
+
+### 2025.07.12
 
 <!-- Content_END -->
