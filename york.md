@@ -50,14 +50,14 @@ Key Points
 
 Note Link: https://github.com/Yorkchung/EIP-7702-Learning/blob/main/Day03.md
 
-
-
-
-
 ### 2025.05.17
+EIP-7702 potential vulnerabilities POC
+Key Points
+1. Dangers of EIP-7702
+2. Proof of Concept (POC)
+3. Metamask Smart Account
 
-
-
+Note Link: https://github.com/Yorkchung/EIP-7702-Learning/blob/main/Day04.md
 
 ### 2025.05.18
 
