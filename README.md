@@ -138,7 +138,7 @@ https://mirror.xyz/0x9FFC14AB8754E4De3b0C763F58564D60f935Ad6F/eiLgBj9iPFmy4s4bmj
 | [yushiwuzheng666](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/yushiwuzheng666.md) | ⭕️ | ⭕️ | ❌ | | |
 | [universe-ron](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/universe-ron.md) | ✅ | ✅ | ⭕️ |   | |
 | [cxc474](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/cxc474.md) | ✅ | ✅ | ✅ | ✅ | |
-| [fffuuuming](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/fffuuuming.md) | ✅ | ✅ | ✅ |   | |
+| [fffuuuming](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/fffuuuming.md) | ✅ | ✅ | ✅ | ✅ | |
 | [Sandybaby07](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/Sandybaby07.md) | ✅ | ✅ | ⭕️ |   | |
 | [a39955720](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/a39955720.md) | ✅ | ✅ | ✅ |   | |
 | [xwwkk](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/xwwkk.md) | ✅ | ✅ | ⭕️ |   | |
@@ -169,6 +169,7 @@ https://mirror.xyz/0x9FFC14AB8754E4De3b0C763F58564D60f935Ad6F/eiLgBj9iPFmy4s4bmj
 | [zion](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/zion.md) | ✅ | ✅ | ✅ | ✅ | |
 | [kris77z](https://github.com/IntensiveCoLearning/EIP-7702/blob/main/kris77z.md) | ⭕️ | ✅ | ✅ | ✅ | |
 <!-- END_COMMIT_TABLE -->
+
 
 
 
